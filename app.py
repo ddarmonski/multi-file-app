@@ -8,9 +8,9 @@ from docx import Document
 load_dotenv()
 
 openai.api_key = os.environ.get("OPEN_API_KEY")
-openai.api_base = "https://tensora-oai-france.openai.azure.com/"
-openai.api_type = "azure"
-openai.api_version = "2023-12-01-preview"
+openai.api_base = os.environ.get("OPEN_API_BASE")
+openai.api_type = os.environ.get("OPEN_API_TYPE")
+openai.api_version = os.environ.get("OPEN_API_VERSION")
 
 def extract_text_from_word(file_path):
     doc = Document(file_path)
