@@ -5,63 +5,69 @@
 name: Build and deploy Python app to Azure Web App - phx-mf
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+    push:
+        branches:
+            - main
+    workflow_dispatch:
+
+env:
+    AZURE_WEBAPP_NAME: my-web-app
+    AZURE_WEBAPP_PACKAGE_PATH: "."
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+    build:
+        runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
+        steps:
+            - uses: actions/checkout@v4
 
-      - name: Set up Python version
-        uses: actions/setup-python@v1
-        with:
-          python-version: '3.11'
+            - name: Set up Python version
+              uses: actions/setup-python@v1
+              with:
+                  python-version: "3.11"
 
-      - name: Create and start virtual environment
-        run: |
-          python -m venv venv
-          source venv/bin/activate
+            - name: Create and start virtual environment
+              run: |
+                  python -m venv venv
+                  source venv/bin/activate
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+            - name: Install dependencies
+              run: pip install -r requirements.txt
 
-      # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
-      - name: Zip artifact for deployment
-        run: zip release.zip ./* -r
+            - name: Building web app
+              uses: azure/appservice-build@v2
 
-      - name: Upload artifact for deployment jobs
-        uses: actions/upload-artifact@v3
-        with:
-          name: python-app
-          path: |
-            release.zip
-            !venv/
+            # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
+            - name: Zip artifact for deployment
+              run: zip release.zip ./* -r
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    environment:
-      name: 'Production'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+            - name: Upload artifact for deployment jobs
+              uses: actions/upload-artifact@v3
+              with:
+                  name: python-app
+                  path: |
+                      release.zip
+                      !venv/
 
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v3
-        with:
-          name: python-app
+    deploy:
+        runs-on: ubuntu-latest
+        needs: build
+        environment:
+            name: "Production"
+            url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
 
-      - name: Unzip artifact for deployment
-        run: unzip release.zip
+        steps:
+            - name: Download artifact from build job
+              uses: actions/download-artifact@v3
+              with:
+                  name: python-app
 
-      - name: 'Deploy to Azure Web App'
-        uses: azure/webapps-deploy@v2
-        id: deploy-to-webapp
-        with:
-          app-name: 'phx-mf'
-          slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_3C62CB3E1EEE4051A165924BCCE3FFD1 }}
+            - name: Unzip artifact for deployment
+              run: unzip release.zip
+
+            - name: Deploy web App using GH Action azure/webapps-deploy
+              uses: azure/webapps-deploy@v2
+              with:
+                  app-name: ${{ env.AZURE_WEBAPP_NAME }}
+                  publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+                  package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
